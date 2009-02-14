@@ -1,0 +1,68 @@
+==============================
+           UTEST 
+Simple Unit Testing for Erlang
+==============================
+
+--------
+PREAMBLE
+--------
+This is an experiment in using text files to specify tests instead of having to 
+write (and debug) unit test code because I'm too lazy to do that. 'utest' is 
+usable but it is strictly experimental/PRE-ALPHA software. I would welcome 
+feedback on how to extend its usefulness.
+
+-------
+INSTALL
+-------
+$ pwd
+/usr/local/erlang-libs (or wherever you keep them)
+$ git clone git://github.com/komone/utest.git
+$ cd utest
+$ erl -make
+
+-----------
+GET STARTED
+-----------
+$ erl
+Eshell V5.6.5 (abort with ^G)
+1> utest:help().
+ help/0 - this message
+ info/1 - get information about an application
+ gen/1 - generate test files for an application
+ run/1 - run the test suite for an application
+ eval/1 - try out a test string to see if it will work
+ config/0 - view current unit test configuration settings
+ config/2 - change one of the current configuration settings
+ok
+
+2> utest:info(myapp).
+{suite,myapp,"0.1",development,"My test application",
+       "/usr/local/erlang-libs/myapp",
+       "2009-02-14T17:45:23.0Z",nonode@nohost,undefined,
+       [myapp,myapp_util],
+...etc...
+ok
+
+3> utest:gen(myapp).
+FILE "/usr/local/erlang-libs/myapp/utest/myapp.test"
+FILE "/usr/local/erlang-libs/myapp/utest/myapp_util.test"
+ok
+
+# Add test cases to the test files and then run them
+# For example...
+4>utest:run(myapp).
+Running...
+FAIL [myapp] to_char("A") == 66
+SKIP [myapp_util] eqiv(obj_new(), decode("{}")) REASON undef
+RESULT [myapp] Total 65, Pass 63, Fail 1, Skipped 1
+ok
+
+-------------
+WRITING TESTS
+-------------
+Tests are specified, one per line, in files called, by default,  
+<module_name>.test that are, by default, created in a subdirectory of the 
+application/project called 'utest'. These are text files and allow you to
+specify tests in erlang-like syntax. 
+
+** Please see the github wiki entry on "Writing Tests".

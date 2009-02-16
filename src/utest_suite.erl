@@ -6,8 +6,8 @@
 -vsn("0.2").
 -author('<steve@simulacity.com>').
 
--include("../include/utest.hrl").
-
+-include("utest.hrl").
+ 
 -export([init/3, setup/1, teardown/1]).
 
 %% TODO: refactor this whole approach to file/path handling 

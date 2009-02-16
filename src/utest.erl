@@ -9,7 +9,7 @@
 -include("../include/utest.hrl").
 
 -export([info/1, gen/1, run/1]).
--export([help/0, config/0, config/2, eval/1]).
+-export([help/0, config/0, config/2, eval/1, print/3]).
 
 %% Prints out a usage reminder to the console
 help() ->

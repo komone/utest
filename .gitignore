@@ -1,3 +1,4 @@
 *.dump
 *.beam
+utest/*
 .DS_Store

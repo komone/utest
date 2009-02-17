@@ -6,7 +6,7 @@
 -vsn("0.2").
 -author('<steve@simulacity.com>').
 
--include("utest.hrl").
+-include("../include/utest.hrl").
  
 -export([init/3, setup/1, teardown/1]).
 
@@ -37,14 +37,7 @@ init(App, TestDir, TestExt) ->
 	_ ->
 		Suite = #suite{application=App, state=development, path=AppDir}
 	end,
-	Wildcard = filename:flatten(["*", TestExt]),
-	Paths = [
-		{AppDir, ".", Wildcard},
-		{AppDir, "src", Wildcard},
-		{AppDir, TestDir, Wildcard},
-		{AppDir, TestDir, filename:flatten(["*/", Wildcard])}
-	],
-	TestFiles = find_files(Paths, []),
+	TestFiles = utest_util:find_files(AppDir, TestExt),
  	Suite#suite{tests=TestFiles}.
 
 %%
@@ -101,23 +94,6 @@ configure([], Suite) ->
 	Suite.
 
 %%
-find_files([{BaseDir, Path, Wildcard}|T], Acc) ->
-	Files = filelib:wildcard(Wildcard, filename:join(BaseDir, Path)),
-	TestFiles = make_filelist(Path, Files, []),
-	find_files(T, lists:append(Acc, TestFiles));
-%
-find_files([], Acc) ->
-	Acc. 
-
-%%
-make_filelist(Path, [H|T], Acc) ->
-	Filename = filename:join([Path, H]),
-	make_filelist(Path, T, [Filename|Acc]);
-%
-make_filelist(_, [], Acc) ->
-	lists:reverse(Acc).
-
-%%
 ensure(Apps, State) ->
     ensure(Apps, application:which_applications(), State).
 %%
@@ -127,7 +103,7 @@ ensure([App|Rest], Running, State) ->
 		%% TODO: move 'print' to utest_report(?) as it's a cyclic call...
 		utest:print(normal, "Stopping ~p...", [App]), 
 		ok = application:stop(App),
-		utest:print(normal, "ok~n", []);
+		utest:print(normal, "ok~n", []); 
 	false when State == start ->
 		utest:print(normal, "Starting ~p...", [App]),
 		ok = application:start(App),

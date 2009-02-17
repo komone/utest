@@ -8,14 +8,25 @@
 
 -include("../include/utest.hrl").
 
--export([expr/3, string/1]).
+-export([load_records/1, expr/4, string/1]).
+
+-compile(export_all).
+
+
+%% 
+load_records(Path) ->
+	Headers = utest_util:find_files(Path, ".hrl"),
+	Other = utest_util:find_files(Path, ".inc"), %% this appears popular
+	load_records(lists:append([Headers, Other]), []).
 
 %%
-expr(Path, Module, Expr) ->
-	case tokenize(Path, Module, Expr) of
+expr(Path, Records, Module, Expr) ->
+	case tokenize(Path, Module, Expr) of 
 	{ok, Tokens} -> 
 		case parse(Tokens) of
-		{ok, Parsed} -> evaluate(Parsed, []);
+		{ok, Parsed} -> 
+			Expanded = expand_records(Records, Parsed),
+			evaluate(Expanded, []);
 		{error, Reason} -> {error, Reason}
 		end;
 	{error, Reason} -> {error, Reason}
@@ -23,11 +34,19 @@ expr(Path, Module, Expr) ->
 
 %%
 string(Expr) ->
-	expr(".", ?MODULE, Expr).
+	expr(".", ?MODULE, [], Expr).
 
 %%
 %% Internal API
 %%
+
+%%
+load_records([H|T], Acc) ->
+	{ok, Form} = epp:parse_file(H, "", []),
+	Records = [X || X = {attribute, _, record, _} <- Form],
+	load_records(T, lists:append([Acc, Records]));
+load_records([], Acc) ->
+	Acc.
 
 %% 
 tokenize(Path, Module, Expr) ->
@@ -45,6 +64,12 @@ tokenize(Path, Module, Expr) ->
 		_:Reason -> {error, Reason}
 	end.
 
+%%
+expand_records(Records, Tokens) -> 
+	Call = [{function,1,utest,0,[{clause,1,[],[],Tokens}]}],
+	Result = erl_expand_records:module(lists:append([Records, Call]), []),
+	[{function, _, utest, 0, [{clause, _, [], [], Tokens1}]}] = Result,
+	Tokens1.
 
 %% Implements contextual function call
 preprocess(Path, Module, [{atom, 1, Name}|[H|T]], Acc) ->
@@ -59,14 +84,20 @@ preprocess(Path, Module, [{atom, 1, Name}|[H|T]], Acc) ->
 preprocess(Path, Module, [{'?', 1}|[H|T]], Acc) ->
 	case H of 
 	{var, 1, 'FILE'} ->
-		case get_file(Path, T, text) of 
-		{error, Reason} -> {error, Reason};
-		{Value, T1} -> preprocess(Path, Module, T1, [Value|Acc])
+		{[{'(', 1}, {string, 1, Filename}, {')', 1}], T1} = lists:split(3, T),
+		case utest_util:load_file(Path, Filename, text) of 
+		{ok, Value} -> 
+			preprocess(Path, Module, T1, [Value|Acc]);
+		{error, Reason} -> 
+			{error, Reason}
 		end;
 	{var, 1, 'BINARY'} -> 
-		case get_file(Path, T, binary) of 
-		{error, Reason} -> {error, Reason};
-		{Value, T1} -> preprocess(Path, Module, T1, [Value|Acc])
+		{[{'(', 1}, {string, 1, Filename}, {')', 1}], T1} = lists:split(3, T),
+		case utest_util:load_file(Path, Filename, binary) of 
+		{ok, Value} -> 
+			preprocess(Path, Module, T1, [Value|Acc]);
+		{error, Reason} -> 
+			{error, Reason}
 		end;
 	{var, 1, 'ANY'} ->
 		preprocess(Path, Module, T, [{var, 1, '_'}|Acc]);		
@@ -85,30 +116,6 @@ preprocess(Path, Module, [H|T], Acc) ->
 preprocess(_, _, [], Acc) ->
 	{ok, lists:flatten(lists:reverse(Acc))}.
 
-%% Load external data files (text or binary)
-get_file(Path, L, Type) ->
-	{[{'(', 1}, {string, 1, Filename}, {')', 1}], T1} = lists:split(3, L),
-	File = filename:join([Path, Filename]),
-	case filelib:is_file(File) of 
-	true -> 
-		{ok, Content} = file:read_file(File),
-		case Type of 
-		binary -> 
-			String = lists:flatten(io_lib:format("~w", [Content]));
-		_ -> 
-			String = binary_to_list(Content)
-		end,
-		try erl_scan:string(String) of 
-		{ok, Tokens, _} -> 
-			{Tokens, T1};
-		{error, {_Line, _Module, Descriptor}, _} -> 
-			Reason = erl_scan:format_error(Descriptor),
-			{error, lists:flatten([Reason, " [in file: \"", File, "\"]"])}
-		catch
-			_:Reason -> {error, Reason}
-		end;
-	false -> {error, {bad_file, File}}
-	end.
 
 %% 
 parse(Code) ->

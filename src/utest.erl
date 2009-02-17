@@ -55,8 +55,9 @@ run(App) when is_atom(App) ->
 	Test = utest_suite:init(App, get_config(test_dir), get_config(file_ext)),
  	print(normal, "Running...~n", []),
 	utest_suite:setup(Test),
+	Records = utest_eval:load_records(Test#suite.path),
  	{ok, Results, {Total, Pass, Fail, Skip}} = run_tests(Test#suite.path,
- 		Test#suite.tests, [], {0, 0, 0, 0}),
+ 		Records, Test#suite.tests, [], {0, 0, 0, 0}),
  	utest_suite:teardown(Test),
  	utest_report:format(Test#suite{results=Results}, 
  		get_config(report), 
@@ -75,25 +76,24 @@ run(App) when is_atom(App) ->
 %%
 
 %%
-run_tests(Path, [H|T], Acc, Tally) ->
+run_tests(Path, Records, [H|T], Acc, Tally) ->
 %%	Module = list_to_existing_atom(filename:basename(H, ?FILE_EXT)),
 	Module = list_to_atom(filename:basename(H, get_config(file_ext))),
 	BeamInfo = Module:module_info(),	
 	TestFile = filename:join([Path, H]),
 	Cases = parse_test_file(TestFile),	
-	{ok, Result, Tally1} = run_cases(Path, Module, Cases, [], Tally),
+	{ok, Result, Tally1} = run_cases(Path, Records, Module, Cases, [], Tally),
 	Results = #results{module=Module, number=length(Cases), file=TestFile,
 		info=BeamInfo, cases=Result},
-	run_tests(Path, T, [Results|Acc], Tally1);
+	run_tests(Path, Records, T, [Results|Acc], Tally1);
 %
-run_tests(_, [], Acc, Tally) ->
+run_tests(_, _, [], Acc, Tally) ->
 	{ok, lists:reverse(Acc), Tally}.
 
 %%
-run_cases(Path, Module, [H|T], Acc, {Total, Pass, Fail, Skip}) ->
+run_cases(Path, Records, Module, [H|T], Acc, {Total, Pass, Fail, Skip}) ->
 	Code = binary_to_list(H),
-	FullPath = filename:join([Path, get_config(test_dir)]),
-	Result = utest_eval:expr(FullPath, Module, Code),
+	Result = utest_eval:expr(Path, Records, Module, Code),
 	case Result of 
 	true -> 
 		Tally = {Total + 1, Pass + 1, Fail, Skip},
@@ -111,9 +111,9 @@ run_cases(Path, Module, [H|T], Acc, {Total, Pass, Fail, Skip}) ->
 		end,
 		print(normal, "~n", [])
 	end,
-	run_cases(Path, Module, T, [{Code, Result}|Acc], Tally);
+	run_cases(Path, Records, Module, T, [{Code, Result}|Acc], Tally);
 %
-run_cases(_, _, [], Acc, Tally) ->
+run_cases(_, _, _, [], Acc, Tally) ->
 	{ok, lists:reverse(Acc), Tally}.
 
 %%

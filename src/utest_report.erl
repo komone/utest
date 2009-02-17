@@ -126,7 +126,7 @@ as_xml_tree(E, L) when is_atom(E), is_list(L) ->
 %% as_xml_tree/3
 %% should only be used by as_xml_tree/1 or xml_tree/2
 as_xml_tree(E, [{K, V}|T], Acc) ->
-	case is_list(V) andalso not is_string(V) of
+	case is_list(V) andalso not utest_util:is_string(V) of
 	true -> 
 		Tag = {E, [{key, [as_xml_tree(K)]}, {values, as_xml_tree(value, V)}]};
 	false -> 
@@ -147,9 +147,3 @@ as_xml_tree(E, [H|T], Acc) ->
 %
 as_xml_tree(_, [], Acc) ->
 	lists:reverse(Acc).
-
-%% an incomplete but usable hack!
-is_string([H|T]) when is_integer(H), H > 0 -> is_string(T);
-is_string([_|_]) -> false;
-is_string([]) -> true;
-is_string(_) -> false.

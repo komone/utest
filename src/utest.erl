@@ -59,17 +59,35 @@ run(App) when is_atom(App) ->
  	{ok, Results, {Total, Pass, Fail, Skip}} = run_tests(Test#suite.path,
  		Records, Test#suite.tests, [], {0, 0, 0, 0}),
  	utest_suite:teardown(Test),
- 	utest_report:format(Test#suite{results=Results}, 
+ 	F = utest_report:format(Test#suite{results=Results}, 
  		get_config(report), 
  		get_config(test_dir)),
+
+	case get_config(browser) == auto andalso get_config(report) == html of 
+	true ->
+	 	case F of
+		{ok, File} -> start_browser(os:type(), File);
+			_ -> ok
+		end;
+	_ -> ok
+ 	end,
  	case get_config(verbosity) of
  	terse -> 
  		{App, [{tests, Total}, {pass, Pass}, {fail, Fail}, {skip, Skip}]};
  	_ -> 
  		print(normal, "RESULT [~p] Total ~p, Pass ~p, Fail ~p, Skipped ~p~n", 
-	 		[App, Total, Pass, Fail, Skip])
+	 		[App, Total, Pass, Fail, Skip]),
+	 	F
  	end.
-
+ 	
+%% BROWSER[LINUX] os:cmd("exec firefox /../test.html").
+%% BROWSER[WIN] os:cmd("start /../test.html").
+%% BROWSER[WIN] os:cmd("rundll32 url.dll,FileProtocolHandler /../test.html").
+start_browser({unix, _}, File) -> start_browser(unix, File);
+start_browser(unix, File) -> os:cmd("exec firefox " ++ File);
+start_browser({win32, _}, File) -> start_browser(win32, File);
+start_browser(win32, File) -> os:cmd("start " ++ File);
+start_browser(_, _) -> {error, no_browser}.
 
 %%
 %% Internal API
@@ -182,6 +200,8 @@ set_config(Key, Value) ->
 		Valid = is_list(Value);
 	file_ext when is_list(Value) -> 
 		Valid = lists:nth(1, Value) == $.;
+	browser -> 
+		Valid = lists:member(Value, [no, off, auto]);
 	_-> 
 		Valid = false
 	end,

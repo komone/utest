@@ -18,8 +18,9 @@
 '#root#'(Data, [#xmlAttribute{name=prolog,value=V}], [], _E) ->
     [V ++ "\n",Data];
 '#root#'(Data, _Attrs, [], _E) ->
-    ["<?xml version=\"1.0\"?>\n"
-    "<!-- TODO: better formatting in utest_xml -->", Data].
+	[ "<?xml version=\"1.0\"?>\n"
+	"<?xml-stylesheet type=\"text/xsl\" href=\"report.xsl\" ?>\n"
+    "<!-- TODO: better formatting in utest_xml -->", Data ].
 
 '#element#'(Tag, [], Attrs, _Parents, _E) ->
 	"\n" ++ xmerl_lib:empty_tag(Tag, Attrs);

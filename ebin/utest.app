@@ -1,6 +1,6 @@
 {application, utest,
  [{description, "Unit Testing"},
-  {vsn, "0.2"},
+  {vsn, "0.3"},
   {modules, [
   	utest,
   	utest_gen,
@@ -12,7 +12,7 @@
 %  {mod, {utest_app, []}}, when converting to OTP
   {env, [
   	{verbosity, normal},   % terse | normal | verbose
-  	{report, xml},         % none | console | raw | text | xml | html
+  	{report, html},         % none | console | raw | text | xml | html
   	{target, [localhost]}, % later add 'remote' for continuous integration
   	{test_dir, "utest"},   % the name for the default test directory
   	{file_ext, ".test"}    % test file extension, must start with .

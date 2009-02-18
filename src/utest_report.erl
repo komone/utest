@@ -32,6 +32,11 @@ timestamp() ->
 		[Y, M, D, H, M1, S]),
 	lists:flatten(L).
 
+%% get unix time in seconds
+unixtime() ->
+	{M, S, _} = now(),
+	1000000 * M + S.
+
 %%
 %% Internal API
 %%
@@ -48,7 +53,30 @@ to_file(Suite, Path) ->
 
 %% reorganizes the #suite tuple so that xmerl:export can process it
 to_xml(Suite, Path) ->
-	T = {suite, [
+	T = convert_to_xml_tree(Suite),
+	Xml = xmerl:export_simple([T], utest_xml),
+	Text = lists:flatten(Xml),
+	write_file(Suite, Text, Path, ".xml").
+	
+%%
+to_html(Suite, Path) ->
+	T = convert_to_xml_tree(Suite),
+	Xml = lists:flatten(xmerl:export_simple([T], utest_xml)),
+	{Element, []} = xmerl_scan:string(Xml),
+	Markup = utest_html:transform(Element),
+	write_file(Suite, Markup, Path, ".html").
+
+%%
+write_file(Suite, Text, Path, FileExt) ->
+	T = io_lib:format("~w", [unixtime()]),
+	Name = filename:flatten([Suite#suite.application, "-test-", T, FileExt]),
+	Filename = filename:join([Suite#suite.path, Path, Name]),
+	ok = file:write_file(Filename, Text),
+	{ok, Filename}.
+
+
+convert_to_xml_tree(Suite) ->
+	{suite, [
 		{application, [as_xml_tree(Suite#suite.application)]},
 		{version, [as_xml_tree(Suite#suite.version)]},
 		{status, [as_xml_tree(Suite#suite.state)]},
@@ -63,12 +91,8 @@ to_xml(Suite, Path) ->
 		{env, as_xml_tree(variable, Suite#suite.env)},
 		{tests, as_xml_tree(file, Suite#suite.tests)},
 		{results, results_to_xml_tree(Suite#suite.results, [])}
-	]},
+	]}.
 	
-	Xml = xmerl:export_simple([T], utest_xml),
-	Text = lists:flatten(Xml),
-	write_file(Suite, Text, Path, ".xml").
-
 %% reorganizes the #results tuple so that xmerl:export can process it
 results_to_xml_tree([H|T], Acc) ->
 	X = {result, [
@@ -81,19 +105,6 @@ results_to_xml_tree([H|T], Acc) ->
 %%
 results_to_xml_tree([], Acc) ->
 	lists:reverse(Acc).
-	
-%%
-to_html(_Suite, _Path) ->
-	{error, to_html, not_implemented}.
-
-%%
-write_file(Suite, Text, Path, FileExt) ->
-	T = integer_to_list(calendar:time_to_seconds(now())),
-	Name = filename:flatten([Suite#suite.application, "-result-", T, FileExt]),
-	Filename = filename:join([Suite#suite.path, Path, Name]),
-	ok = file:write_file(Filename, Text),
-	{ok, Filename}.
-
 
 %% as_xml_tree/1
 %% reorganize #suite values so that xmerl:export can process them

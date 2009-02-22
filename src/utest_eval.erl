@@ -8,16 +8,9 @@
 
 -include("../include/utest.hrl").
 
--export([load_records/1, expr/4, string/1]).
+-export([expr/4, string/1, load_records/1]).
 
 -compile(export_all).
-
-
-%% 
-load_records(Path) ->
-	Headers = utest_util:find_files(Path, ".hrl"),
-	Other = utest_util:find_files(Path, ".inc"), %% this appears popular
-	load_records(lists:append([Headers, Other]), []).
 
 %%
 expr(Path, Records, Module, Expr) ->
@@ -34,7 +27,13 @@ expr(Path, Records, Module, Expr) ->
 
 %%
 string(Expr) ->
-	expr(".", ?MODULE, [], Expr).
+	expr(".", [], ?MODULE, Expr).
+
+%% 
+load_records(Path) ->
+	Headers = utest_util:find_files(Path, ".hrl"),
+	Other = utest_util:find_files(Path, ".inc"), %% this appears popular
+	load_records(lists:append([Headers, Other]), []).
 
 %%
 %% Internal API
@@ -83,22 +82,18 @@ preprocess(Path, Module, [{atom, 1, Name}|[H|T]], Acc) ->
 %% Implements Macros
 preprocess(Path, Module, [{'?', 1}|[H|T]], Acc) ->
 	case H of 
-	{var, 1, 'FILE'} ->
-		{[{'(', 1}, {string, 1, Filename}, {')', 1}], T1} = lists:split(3, T),
-		case utest_util:load_file(Path, Filename, text) of 
-		{ok, Value} -> 
-			preprocess(Path, Module, T1, [Value|Acc]);
-		{error, Reason} -> 
-			{error, Reason}
-		end;
+	{var, 1, 'FILE'} -> %% TODO: deprecate this
+		{ok, Tokens, T1} = get_data(Path, T, text),
+		preprocess(Path, Module, T1, [Tokens|Acc]);
 	{var, 1, 'BINARY'} -> 
-		{[{'(', 1}, {string, 1, Filename}, {')', 1}], T1} = lists:split(3, T),
-		case utest_util:load_file(Path, Filename, binary) of 
-		{ok, Value} -> 
-			preprocess(Path, Module, T1, [Value|Acc]);
-		{error, Reason} -> 
-			{error, Reason}
-		end;
+		{ok, Tokens, T1} = get_data(Path, T, binary),
+		preprocess(Path, Module, T1, [Tokens|Acc]);
+	{var, 1, 'TERM'} -> 
+		{ok, Tokens, T1} = get_data(Path, T, term),
+		preprocess(Path, Module, T1, [Tokens|Acc]);
+	{var, 1, 'TEXT'} ->
+		{ok, Tokens, T1} = get_data(Path, T, text),
+		preprocess(Path, Module, T1, [Tokens|Acc]);
 	{var, 1, 'ANY'} ->
 		preprocess(Path, Module, T, [{var, 1, '_'}|Acc]);		
 	{var, 1, 'MODULE'} ->
@@ -116,6 +111,39 @@ preprocess(Path, Module, [H|T], Acc) ->
 preprocess(_, _, [], Acc) ->
 	{ok, lists:flatten(lists:reverse(Acc))}.
 
+%%
+get_data(Path, Tokens, DataType) ->
+	{[{'(', 1}, {string, 1, Filename}, {')', 1}], T1} = lists:split(3, Tokens),
+	File = filename:join([Path, utest:config(test_dir), Filename]),
+	case filelib:is_file(File) of 
+	true -> 
+		{ok, Content} = file:read_file(File),
+		case DataType of
+		binary -> 
+			String = lists:flatten(io_lib:format("~w", [Content]));
+		term -> 
+			List = binary_to_list(Content),
+			%% trim trailing '.'
+			case lists:last(List) of
+			$. -> String = lists:sublist(List, length(List) - 1);
+			_ -> String = List
+			end;
+		text ->
+			Text = binary_to_list(Content), 
+			String = lists:flatten(io_lib:format("~w", [Text]))
+		end,
+		try erl_scan:string(String) of 
+		{ok, Data, _} -> 
+			{ok, Data, T1};
+		{error, {_Line, _Module, Descriptor}, _} -> 
+			Reason = erl_scan:format_error(Descriptor),
+			{error, lists:flatten([Reason, " [in file: \"", File, "\"]"])}
+		catch
+			_:Reason -> {error, Reason}
+		end;
+	false -> 
+		{error, {bad_file, File}}
+	end.
 
 %% 
 parse(Code) ->

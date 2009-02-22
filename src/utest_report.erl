@@ -158,3 +158,4 @@ as_xml_tree(E, [H|T], Acc) ->
 %
 as_xml_tree(_, [], Acc) ->
 	lists:reverse(Acc).
+

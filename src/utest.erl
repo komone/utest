@@ -9,7 +9,7 @@
 -include("../include/utest.hrl").
 
 -export([info/1, gen/1, run/1]).
--export([help/0, config/0, config/2, eval/1, print/3]).
+-export([help/0, config/0, config/1, config/2, eval/1, print/3]).
 
 %% Prints out a usage reminder to the console
 help() ->
@@ -25,6 +25,10 @@ help() ->
 %% Prints out the configuation parameters to the console
 config() ->
 	io:format("~p~n", [get_config()]).
+
+%%
+config(Key) ->
+	get_config(Key).
 
 %% Updates the configuration parameter 'Key' with the value 'Value' 
 config(Key, Value) ->

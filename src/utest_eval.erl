@@ -176,6 +176,8 @@ process_branch({op, 1, Op, Arg1, Arg2}) ->
 process_branch(ParseTree) -> 
 	ParseTree.
 
+%% note: using ?ANY with =:=, =/= does not make sense
+%% semantically, thus only == and /= should be supported
 process_op_branch('==', Arg1, Arg2) ->
 	case has_unbound(Arg1) xor has_unbound(Arg2) of 
 	true ->	convert_to_case(Arg1, Arg2, true, false);

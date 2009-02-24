@@ -10,22 +10,37 @@
 
 -export(['#xml-inheritance#'/0]).
 -export(['#root#'/4, '#element#'/5, '#text#'/1]).
+-export([cleanup/1]).
 
-%% TODO: Pretty print XML
+-define(INDENT, "  ").
 
 '#xml-inheritance#'() -> [].
 
 '#root#'(Data, [#xmlAttribute{name=prolog,value=V}], [], _E) ->
     [V ++ "\n",Data];
 '#root#'(Data, _Attrs, [], _E) ->
-	[ "<?xml version=\"1.0\"?>\n"
-	"<?xml-stylesheet type=\"text/xsl\" href=\"report.xsl\" ?>\n"
-    "<!-- TODO: better formatting in utest_xml -->", Data ].
+	["<?xml version=\"1.0\"?>\n",
+	"<?xml-stylesheet type=\"text/xsl\" href=\"report.xsl\" ?>\n", 
+	Data].
 
-'#element#'(Tag, [], Attrs, _Parents, _E) ->
-	"\n" ++ xmerl_lib:empty_tag(Tag, Attrs);
-'#element#'(Tag, Data, Attrs, _Parents, _E) ->
-	"\n" ++ xmerl_lib:markup(Tag, Attrs, Data).
+'#element#'(Tag, [], Attrs, Parents, _E) ->
+	Level = length(Parents),
+	lists:flatten([indent(Level), 
+		xmerl_lib:empty_tag(Tag, Attrs), indent(Level - 1)]);
+'#element#'(Tag, Data, Attrs, Parents, _E) ->
+	Level = length(Parents),
+	lists:flatten([indent(Level), 
+		xmerl_lib:markup(Tag, Attrs, Data), indent(Level - 1)]).
 
 '#text#'(Text) ->
 	xmerl_lib:export_text(Text).
+
+indent(Level) when Level > 0 ->
+	["\n", lists:duplicate(Level, ?INDENT)];
+indent(_) ->
+	["\n"].
+	
+%% ok, this is an ugly hack...
+cleanup(Text) ->
+	re:replace(Text, "\n[\t ]*\n", "\n", [global, {return, list}]).
+	

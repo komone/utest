@@ -4,7 +4,7 @@
 
 -module(utest_report).
 -vsn("0.2").
--author('<steve@simulacity.com>').
+-author("Steve Davis <steve@simulacity.com>").
 
 -include("../include/utest.hrl").
 
@@ -55,8 +55,8 @@ to_file(Suite, Path) ->
 to_xml(Suite, Path) ->
 	T = convert_to_xml_tree(Suite),
 	Xml = xmerl:export_simple([T], utest_xml),
-	Text = lists:flatten(Xml),
-	write_file(Suite, Text, Path, ".xml").
+	Markup = utest_xml:cleanup(lists:flatten(Xml)), 
+	write_file(Suite, Markup, Path, ".xml").
 	
 %%
 to_html(Suite, Path) ->

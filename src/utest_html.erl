@@ -33,7 +33,6 @@ template(E = #xmlElement{name='suite'})->
 	"<body>\n"
 	"<h1>",
 	appname(E),
-	xmerl_xs:value_of("result/count()"),
 	"</h1>\n",
 	io_lib:format("<table cellpadding=\"6\" cellspacing=\"0\" border=\"1\">\n<tr>\n"
 		"<td class=\"bold total\">TESTS: ~p</td>\n"

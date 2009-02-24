@@ -3,8 +3,8 @@
 %% See MIT License
 
 -module(utest_report).
--vsn("0.2").
--author("Steve Davis <steve@simulacity.com>").
+-vsn("0.3").
+-author('steve@simulacity.com').
 
 -include("../include/utest.hrl").
 
@@ -61,20 +61,24 @@ to_xml(Suite, Path) ->
 %%
 to_html(Suite, Path) ->
 	T = convert_to_xml_tree(Suite),
-	Xml = lists:flatten(xmerl:export_simple([T], utest_xml)),
+	Xml = lists:flatten(xmerl:export_simple([T], xmerl_xml)),
 	{Element, []} = xmerl_scan:string(Xml),
-	Markup = utest_html:transform(Element),
-	write_file(Suite, Markup, Path, ".html").
+	Html = utest_html:transform(Element),
+	{Xml1, []} = xmerl_scan:string(Html),
+	Markup = xmerl:export([Xml1], utest_html),
+	Markup1 = utest_html:cleanup(lists:flatten(Markup)),
+	write_file(Suite, Markup1, Path, ".html").
 
 %%
 write_file(Suite, Text, Path, FileExt) ->
 	T = io_lib:format("~w", [unixtime()]),
-	Name = filename:flatten([Suite#suite.application, "-test-", T, FileExt]),
+	Name = filename:flatten([Suite#suite.application, "-test-", T, FileExt]), 
 	Filename = filename:join([Suite#suite.path, Path, Name]),
 	ok = file:write_file(Filename, Text),
 	{ok, Filename}.
 
 
+%% reorganizes the #suite tuple so that xmerl:export can process it
 convert_to_xml_tree(Suite) ->
 	{suite, [
 		{application, [as_xml_tree(Suite#suite.application)]},

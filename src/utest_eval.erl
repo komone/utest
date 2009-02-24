@@ -4,7 +4,7 @@
 
 -module(utest_eval).
 -vsn("0.2").
--author('<steve@simulacity.com>').
+-author('steve@simulacity.com').
 
 -include("../include/utest.hrl").
 
@@ -12,7 +12,9 @@
 
 -compile(export_all).
 
-%%
+%% TODO: use joe's "try begin end catch" transactional idiom throughout
+
+%% 
 expr(Path, Records, Module, Expr) ->
 	case tokenize(Path, Module, Expr) of 
 	{ok, Tokens} -> 

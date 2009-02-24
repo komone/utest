@@ -3,19 +3,26 @@
 %% See MIT License
 
 -module(utest_html).
--vsn("0.2"). 
--author('<steve@simulacity.com>').
+-vsn("0.3"). 
+-author('steve@simulacity.com').
 
 -include_lib("xmerl/include/xmerl.hrl").
 
 -export([transform/1]).
+-export(['#xml-inheritance#'/0]).
+-export(['#root#'/4, '#element#'/5, '#text#'/1]).
+-export([cleanup/1]).
 
-%% NOTE: I am really not really proud of this code. It's really written this way
-%% to avoid dependencies outside the report file. However, I hope that in the future 
-%% xmerl_xs will allow us to read in and apply an external XSLT stylesheet programmatically.
+-define(INDENT, "  ").
 
+%%
 transform(Xml) ->
 	lists:flatten(template(Xml)).
+
+%% NOTE: I am really not really proud of this code. It's really written this way
+%% to avoid dependencies outside the report file. However, I hope that in the 
+%% future xmerl_xs will allow us to read in and apply an external XSLT 
+%% stylesheet programmatically.
 
 template(E = #xmlElement{name='suite'})->
 	Cases = xmerl_xs:select("results/result/test-cases/test-case/output/text()", E),
@@ -23,23 +30,23 @@ template(E = #xmlElement{name='suite'})->
 	Pass = length([X || X <- Cases, xmerl_xs:value_of(X) == ["true"]]),
 	Fail = length([X || X <- Cases, xmerl_xs:value_of(X) == ["false"]]),
 	Skipped = Total - Pass - Fail,
-	["<\?xml version=\"1.0\" encoding=\"utf-8\"\?>\n",
+	["<\?xml version=\"1.0\" encoding=\"utf-8\"\?>",
     doctype(),
-	"<html>\n",
-	"<head>\n",
-	"<title>Unit Tests - ", appname(E), "</title>\n",
+	"<html>",
+	"<head>",
+	"<title>Unit Tests - ", appname(E), "</title>",
 	css(),
-	"</head>\n"
-	"<body>\n"
+	"</head>"
+	"<body>"
 	"<h1>",
 	appname(E),
-	"</h1>\n",
-	io_lib:format("<table cellpadding=\"6\" cellspacing=\"0\" border=\"1\">\n<tr>\n"
-		"<td class=\"bold total\">TESTS: ~p</td>\n"
-		"<td class=\"bold pass\">PASS: ~p</td>\n"
-		"<td class=\"bold fail\">FAIL: ~p</td>\n"
-		"<td class=\"bold skip\">SKIP: ~p</td>\n"
-		"</tr>\n</table>\n<br/>\n", [Total, Pass, Fail, Skipped]),
+	"</h1>",
+	io_lib:format("<table cellpadding=\"6\" cellspacing=\"0\" border=\"1\"><tr>"
+		"<td class=\"bold total\">TESTS: ~p</td>"
+		"<td class=\"bold pass\">PASS: ~p</td>"
+		"<td class=\"bold fail\">FAIL: ~p</td>"
+		"<td class=\"bold skip\">SKIP: ~p</td>"
+		"</tr></table><br/>", [Total, Pass, Fail, Skipped]),
 	table_start("Application"),
 	attribute_row("Application", "application", E),
 	attribute_row("Version", "version", E),
@@ -75,6 +82,7 @@ template(_E = #xmlElement{ parents=[{'suite',_}|_], name='invoke'}) -> [];
 template(_E = #xmlElement{ parents=[{'suite',_}|_], name='local-path'}) -> [];
 template(_E = #xmlElement{ parents=[{'suite',_}|_], name='env'}) -> [];
 template(_E = #xmlElement{ parents=[{'suite',_}|_], name='tests'})  -> [];
+template(_E = #xmlElement{ parents=[{'tests',_}|_], name='file'})  -> [];
 template(_E = #xmlElement{ parents=[{'result',_}|_], name='module'}) -> [];
 template(_E = #xmlElement{ parents=[{'result',_}|_], name='number'}) -> [];
 template(_E = #xmlElement{ parents=[{'result',_}|_], name='test-file'}) -> [];
@@ -91,7 +99,7 @@ template(E = #xmlElement{ parents=[{'results',_}|_], name='result'}) ->
 	xmerl_xs:value_of(xmerl_xs:select("number", E)), 
 	" tests - (<em>",
 	xmerl_xs:value_of(xmerl_xs:select("test-file", E)), 
-	")</em></td></tr>\n",
+	"</em>)</td></tr>",
     xmerl_xs:xslapply(fun template/1, E)
     ];
 
@@ -121,11 +129,8 @@ template(E)->
 
 
 doctype() ->
-%% <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
-%%     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-    "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\"\n"
-    "    \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n"
-    "<!-- Yet another example of SUPER-UGLY Generated HTML -->\n".
+	"<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.1//EN\"\n"
+    "  \"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd\">\n".
 
 appname(E) ->
 	[xmerl_xs:value_of(xmerl_xs:select("/suite/application", E)),
@@ -133,17 +138,22 @@ appname(E) ->
 	
 table_start(Heading) ->
 	["<table cellpadding=\"4\" cellspacing=\"0\" border=\"1\">",
-	"<thead><tr><th colspan=\"2\">", Heading, "</th></tr>\n</thead>",
+	"<thead><tr><th colspan=\"2\">", Heading, "</th></tr></thead>",
 	"<tbody>"].
 
 table_end() ->
-	["</tbody>", "</table>\n", "<br/>\n"].
+	["</tbody>", "</table>", "<br/>"].
 
 attribute_row(Name, Value, E) ->
-	["<tr><td>", Name, "</td><td>", xmerl_xs:value_of(xmerl_xs:select(Value, E)), "</td></tr>\n"].
+	Content = xmerl_xs:value_of(xmerl_xs:select(Value, E)),
+	case length(Content) > 1 of
+	true -> Content1 = [X ++ " " || X <- Content];
+	false -> Content1 = Content
+	end,
+	["<tr><td>", Name, "</td><td>", Content1, "</td></tr>"].
 
 css() ->
-"<style type=\"text/css\">
+	"<style type=\"text/css\">
 	body {
 		margin: 40px;
 	}
@@ -210,4 +220,58 @@ css() ->
 		font-size: 9pt;
 		text-align: center;
 	}
-</style>".
+    </style>".
+
+%%
+%% Xmerl Callbacks
+%%
+
+'#xml-inheritance#'() -> [].
+
+'#root#'(Data, [#xmlAttribute{name=prolog,value=V}], [], _E) ->
+    [V ++ "\n",Data];
+'#root#'(Data, _Attrs, [], _E) ->
+	["<?xml version=\"1.0\" encoding=\"utf-8\"?>\n",
+	"<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.1//EN\"\n",
+    "  \"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd\">\n",
+	Data].
+
+'#element#'(Tag, [], Attrs, Parents, _E) ->
+	case inline(Tag) of 
+	true ->
+		xmerl_lib:empty_tag(Tag, Attrs);
+	false ->
+		Level = length(Parents),
+		lists:flatten([indent(Level), 
+			xmerl_lib:empty_tag(Tag, Attrs), 
+			indent(Level - 1)])
+	end;
+'#element#'(Tag, Data, Attrs, Parents, _E) ->
+	case inline(Tag) of 
+	true ->
+		xmerl_lib:markup(Tag, Attrs, Data);		
+	false ->
+		Level = length(Parents),
+		lists:flatten([indent(Level), 
+			xmerl_lib:markup(Tag, Attrs, Data), 
+			indent(Level - 1)])
+	end.
+	
+'#text#'(Text) ->
+	xmerl_lib:export_text(Text).
+
+ 
+%%
+indent(Level) when Level > 0 ->
+	["\n", lists:duplicate(Level, ?INDENT)];
+indent(_) ->
+	["\n"].
+	
+%% ok, this is an ugly hack...
+cleanup(Text) ->
+	re:replace(Text, "[\t\r\n ]*\n", "\n", [global, {return, list}]).
+
+inline(span) -> true;
+inline(a) -> true;
+inline(em) -> true;
+inline(_) -> false.

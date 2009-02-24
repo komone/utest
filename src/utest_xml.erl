@@ -3,8 +3,8 @@
 %% See MIT License
 
 -module(utest_xml).
--vsn("0.2"). 
--author('<steve@simulacity.com>').
+-vsn("0.3"). 
+-author('steve@simulacity.com').
 
 -include_lib("xmerl/include/xmerl.hrl").
 
@@ -13,6 +13,10 @@
 -export([cleanup/1]).
 
 -define(INDENT, "  ").
+
+%%
+%% Xmerl Callbacks
+%%
 
 '#xml-inheritance#'() -> [].
 
@@ -35,6 +39,8 @@
 '#text#'(Text) ->
 	xmerl_lib:export_text(Text).
 
+ 
+%%
 indent(Level) when Level > 0 ->
 	["\n", lists:duplicate(Level, ?INDENT)];
 indent(_) ->
@@ -43,4 +49,3 @@ indent(_) ->
 %% ok, this is an ugly hack...
 cleanup(Text) ->
 	re:replace(Text, "\n[\t ]*\n", "\n", [global, {return, list}]).
-	

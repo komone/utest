@@ -8,7 +8,7 @@
 %% @copyright 2007 Mochi Media, Inc.
 
 -module(utest_dev).
--vsn("0.2").
+-vsn("0.3").
 -author('steve@simulacity.com').
 
 -behaviour(gen_server).

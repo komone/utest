@@ -3,8 +3,8 @@
 %% See MIT License
 
 -module(utest_util).
--vsn("0.2").
--author('<steve@simulacity.com>').
+-vsn("0.3").
+-author('steve@simulacity.com').
 
 %% Various functions that I wish were stdlib functions
 -compile(export_all).

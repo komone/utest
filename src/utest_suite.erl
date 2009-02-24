@@ -3,8 +3,8 @@
 %% See MIT License
 
 -module(utest_suite).
--vsn("0.2").
--author('<steve@simulacity.com>').
+-vsn("0.3").
+-author('steve@simulacity.com').
 
 -include("../include/utest.hrl").
  

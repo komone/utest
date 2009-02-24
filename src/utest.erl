@@ -4,7 +4,7 @@
 
 -module(utest).
 -vsn("0.2"). 
--author('<steve@simulacity.com>').
+-author('steve@simulacity.com').
 
 -include("../include/utest.hrl").
 

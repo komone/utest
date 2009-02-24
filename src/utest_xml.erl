@@ -49,3 +49,4 @@ indent(_) ->
 %% ok, this is an ugly hack...
 cleanup(Text) ->
 	re:replace(Text, "\n[\t ]*\n", "\n", [global, {return, list}]).
+
